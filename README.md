@@ -1,2 +1,2 @@
 # arq_redes
-É um repositório voltado para o desenvolvimento de projetos em arquitetura de redes baseados em transporte confiável de dados utilizando protocolo de bit alternante.
+It is a repository for the development of network architecture projects based on reliable data transport using alternating bit protocol.
