@@ -11,7 +11,10 @@ import platform
 def config():
     global UDP_IP_ADDRESS
     global UDP_PORT_NO
+    global closeMessage
 
+
+    closeMessage = 'fim'
 
     UDP_IP_ADDRESS = raw_input('Digite o IP do servidor : ')
     UDP_PORT_NO = int(raw_input('Digite a porta desejada entre 10001 e 11000: '))
@@ -22,26 +25,41 @@ def config():
     pass
 #_____________________________________________________________
 
-def host(UDP_IP_ADDRESS, UDP_PORT_NO):
+def host(UDP_IP_ADDRESS, UDP_PORT_NO, closeMessage):
 
     serverSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     serverSock.bind((UDP_IP_ADDRESS, UDP_PORT_NO))
     print("Waiting... ")
 
-    while True:
+    while Message != MAX_MESSAGE:
         data, addr = serverSock.recvfrom(1024)
         data = data.decode()
-        print("Message: ", data)
+
+        ACK = data[0]
+        Message = data[1]
+        MAX_MESSAGE = data[2]
+
+        print("REC: ", data)
+
+        if ACK == "0":
+            serverSock.sendto(ACK.encode(), UDP_IP_ADDRESS)
+            print("SENT: ", " ACK = " + ACK + "\n")
+
+        if ACK == "1":
+            serverSock.sendto(ACK.encode(), UDP_IP_ADDRESS)
+            print("SENT: ", " ACK = " + ACK + "\n")
+
+        if Message == closeMessage:
+            serverSock.close()
 
     pass
-
 #_____________________________________________________________
 
 def main():
 
     config()
-    host(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE)
+    host(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE, closeMessage)
 
 #_____________________________________________________________
 

@@ -29,6 +29,9 @@ def config():
     global UDP_PORT_NO
     global MAX_MESSAGE
     global SEQNO
+    global closeMessage
+
+    closeMessage = 'fim'
 
     UDP_IP_ADDRESS = raw_input('Digite o IP do servidor : ')
     UDP_PORT_NO = int(raw_input('Digite a porta desejada entre 10001 e 11000: '))
@@ -44,7 +47,7 @@ def config():
     pass
 #_____________________________________________________________
 
-def messenger(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE):
+def messenger(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE, SEQNO):
     Message = 0 #começo as mensagens com zero
 
     while Message < MAX_MESSAGE:
@@ -57,17 +60,17 @@ def messenger(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE):
                 clientSock.settimeout(1.0)
                 answer, UDP_IP_ADDRESS = clientSock.recvfrom(1024)
                 answer = answer.decode()
-                ACK = answer
+                ACK = answer[0]
 
                 if ACK == "0":
                     print("RECV :" + "ACK = " + answer + "\n")
                     SEQNO = 1
                     Message = Message + 1
 
-            except timeout:
+            except clientSock.timeout:
                 print("RECV: timeout!")
 
-        if SEQNO ==1:
+        if SEQNO == 1:
             data = str(SEQNO) + str(Message) + str(MAX_MESSAGE)
             clientSock.sendto(data.encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
             print("SENT: ", "SEQNO: " + str(SEQNO) + " / Data: " + str(Message) + " / Maximo: " + str(MAX_MESSAGE))
@@ -82,10 +85,12 @@ def messenger(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE):
                     SEQNO = 0
                     Message = Message + 1
 
-            except timeout:
+            except clientSock.timeout:
                 print("RECV: timeout!")
 
-    client_socket.close()
+    if Message == MAX_MESSAGE:
+        clientSock.sendto(str(closeMessage), (UDP_IP_ADDRESS, UDP_PORT_NO))
+        clientSock.close()
 
 
     pass
@@ -95,7 +100,7 @@ def messenger(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE):
 def main():
 
     config()
-    messenger(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE)
+    messenger(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE, SEQNO)
 
 #_____________________________________________________________
 
