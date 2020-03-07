@@ -1,119 +1,106 @@
-
-
-import socket
+from socket import socket, AF_INET, SOCK_DGRAM, timeout
 import sys
 import os
 import platform
 
-clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-#_____________________________________________________________
-
-def ping_IP(UDP_IP_ADDRESS):
-    if platform.system() == "Windows":
-        rep = os.system('ping ' + UDP_IP_ADDRESS +" -n 1")
-    else:
-        rep = os.system('ping -c 2 ' + UDP_IP_ADDRESS)
-
-    while rep != 0:
-        print ("Servidor não encontrado...")
-        UDP_IP_ADDRESS = input('Digite novamente o IP do servidor : ')
-        rep = os.system('ping ' + UDP_IP_ADDRESS)
-
-    pass
-#_____________________________________________________________
-
-def config():
-    global UDP_IP_ADDRESS
-    global UDP_PORT_NO
-    global MAX_MESSAGE
-    global SEQNO
-
-    UDP_IP_ADDRESS = input('Digite o IP do servidor : ')
-    UDP_PORT_NO = int(input('Digite a porta desejada entre 10001 e 11000: '))
-    while (UDP_PORT_NO < 10001) or (UDP_PORT_NO > 11000):
-        print("A porta deve ser entre 10001 - 11000")
-        UDP_PORT_NO = int(input('Digite a porta desejada entre 10001 e 11000: '))
-
-    ping_IP(UDP_IP_ADDRESS)
-    print("Servidor Ok!!!")
-
-    while True:
-        try:
-            MAX_MESSAGE = int(input('Digite o numero maximo de mensagens: '))
-            break
-
-        except:
-            print("Digite um valor inteiro!")
-            MAX_MESSAGE = int(input('Digite o numero maximo de mensagens: '))
-
-    return MAX_MESSAGE
+global ipServer
+global port
+global maxMessage
 
 
+#https://www.cybrary.it/blog/0p3n/ping-using-python-script/
+def ipConfig():
+	while True:
+		ipServer = input('Digite o IP do servidor : ')
+
+		if platform.system() == "Windows":
+			rep = os.system('ping ' + ipServer +' -n 1')
+			print ("Servidor Ok!!!")
+			break
+		else:
+			rep = os.system('ping -c 2 ' + ipServer)
+			print ("Servidor Ok!!!")
+			break
+
+		while rep != 0:
+			print ("Servidor não encontrado...")
+			ipServer = input('Digite novamente o IP do servidor : ')
+			if platform.system() == "Windows":
+				rep = os.system('ping ' + ipServer +' -n 1')
+			else:
+				rep = os.system('ping -c 2 ' + ipServer)
+	return ipServer
 
 
-    pass
-#_____________________________________________________________
+def portConfig():
+	while True:
+		port = int(input('Digite a porta entre 10001 e 11000: '))
 
-def messenger(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE):
-    Message = 0 #começo as mensagens com zero
-    SEQNO = 0
+		while (port < 10001) or (port > 11000):
+			print("A porta deve ser entre 10001 - 11000")
+			port = int(input('Digite a porta desejada entre 10001 e 11000: '))
+		print ("Porta válida")
+		break
+	return port
 
-    while Message < MAX_MESSAGE:
 
-        if SEQNO == 0:
-            data = str(SEQNO) + str(Message) + str(MAX_MESSAGE)
-            clientSock.sendto(data.encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
-            print("SENT: ", "SEQNO: " + str(SEQNO) + " / Data: " + str(Message) + " / Maximo: " + str(MAX_MESSAGE))
-            try:
-                clientSock.settimeout(1.0)
-                answer, UDP_IP_ADDRESS = clientSock.recvfrom(1024)
-                answer = answer.decode()
-                dado = str(answer)
+def maxMessage():
+	MAX_MESSAGE = input('Digite o numero maximo de mensagens: ')
 
-                if dado[2] == "0":
-                    print("RECV :" + answer + "\n")
-                    SEQNO = 1
-                    Message = Message + 1
+	while True:
+		try:
+			MAX_MESSAGE = int(MAX_MESSAGE)
+			break
+		except:
+			print("O valor deve ser um numero inteiro")
+			MAX_MESSAGE = input('Digite novamente o numero maximo de mensagens: ')
+	return MAX_MESSAGE
 
-            except clientSock.timeout:
-                print("RECV: timeout!")
+def sender():
+	ipServer = ipConfig()
+	port = portConfig()
+	MAX_MESSAGE = maxMessage()
+	destiny = (ipServer,port)
 
-        if SEQNO == 1:
-            data = str(SEQNO) + str(Message) + str(MAX_MESSAGE)
-            clientSock.sendto(data.encode(), (UDP_IP_ADDRESS, UDP_PORT_NO))
-            print("SENT: ", "SEQNO: " + str(SEQNO) + " / Data: " + str(Message) + " / Maximo: " + str(MAX_MESSAGE))
-            try:
-                clientSock.settimeout(1.0)
-                answer, UDP_IP_ADDRESS = clientSock.recvfrom(1024)
-                answer = answer.decode()
-                dado = str(answer)
-                
-                if dado[2] == "1":
-                    print("RECV :" + answer + "\n")
-                    SEQNO = 0
-                    Message = Message + 1
+	client_socket = socket(AF_INET, SOCK_DGRAM)
 
-            except clientSock.timeout:
-                print("RECV: timeout!")
+	seqno = 0
+	data = 1
 
-    pass
-#_____________________________________________________________
+	while (data < MAX_MESSAGE):
+		if seqno == 0:
+			message = str(seqno) + str(data) + str(MAX_MESSAGE)
+			client_socket.sendto(message.encode(), destiny)
+			print("SENT: " + str(seqno) + str(data) + str(MAX_MESSAGE))
+			try:
+				client_socket.settimeout(1)
+				resp, ipServer = client_socket.recvfrom(2048)
+				resp = resp.decode()
+				ACK = resp[3]
+				if ACK == "0":
+					print("RECV: " + resp + "\n")
+					seqno = 1
+					data = data + 1
 
-def closeMessage():
+			except timeout:
+				print("RECV: Timeout")
 
-    clientSock.close()
+		if seqno == 1:
+			message = str(seqno) + str(data) + str(MAX_MESSAGE)
+			client_socket.sendto(message.encode(), destiny)
+			print("SENT: " + str(seqno) + str(data) + str(MAX_MESSAGE))
+			try:
+				client_socket.settimeout(1)
+				resp, ipServer = client_socket.recvfrom(2048)
+				resp = resp.decode()
+				ACK = resp[3]
+				if ACK == "1":
+					print("RECV: " + resp + "\n")
+					seqno = 0
+					data = data + 1
 
-    pass
+			except timeout:
+				print("RECV: Timeout")
+	client_socket.close()
 
-#_____________________________________________________________
-
-def main():
-
-    config()
-    messenger(UDP_IP_ADDRESS, UDP_PORT_NO, MAX_MESSAGE)
-    closeMessage()
-#_____________________________________________________________
-
-if __name__ == '__main__':
-    main()
+sender()
